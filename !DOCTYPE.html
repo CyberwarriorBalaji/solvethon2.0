@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Server Energy Management Dashboard</title>
+    <!-- Chart.js for Live Energy Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; padding: 25px; }
+        .dashboard-container { max-width: 1200px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 25px; }
+        header h1 { color: #38bdf8; font-size: 2rem; margin-bottom: 5px; }
+        header p { color: #94a3b8; font-size: 0.95rem; }
+
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 15px; text-align: center; }
+        .card h3 { font-size: 0.85rem; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card p { font-size: 1.5rem; font-weight: bold; color: #38bdf8; }
+
+        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .main-content { grid-template-columns: 1fr; } }
+
+        .panel { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; }
+        .panel h2 { font-size: 1.15rem; color: #f1f5f9; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+
+        form label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-top: 12px; margin-bottom: 4px; }
+        form input, form select { width: 100%; padding: 9px 12px; border: 1px solid #475569; background: #0f172a; color: #fff; border-radius: 6px; font-size: 0.95rem; }
+        form input:focus, form select:focus { outline: none; border-color: #38bdf8; }
+        
+        form button { width: 100%; margin-top: 20px; padding: 11px; background: #0284c7; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+        form button:hover { background: #0369a1; }
+
+        .placeholder-box { background: #0f172a; border: 1px dashed #475569; padding: 15px; border-radius: 6px; font-size: 0.9rem; color: #94a3b8; line-height: 1.6; }
+        .result-field { margin-bottom: 6px; }
+        
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
+        .badge-LOW-POWER { background: #15803d; color: #dcfce7; }
+        .badge-KEEP-ON { background: #b45309; color: #fef3c7; }
+        .badge-ACTIVATE { background: #b91c1c; color: #fee2e2; }
+
+        .chart-box { margin-top: 20px; height: 210px; background: #0f172a; border-radius: 6px; padding: 10px; border: 1px solid #334155; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header>
+            <h1>⚡ AI/ML Smart Server Energy Management</h1>
+            <p>Predictive Server Energy & Workload Safety Engine Prototype</p>
+        </header>
+
+        <!-- Metrics Overview Cards -->
+        <section class="metrics-grid">
+            <div class="card"><h3>Total Servers</h3><p id="metric-total">10</p></div>
+            <div class="card"><h3>Active (KEEP ON)</h3><p id="metric-active">7</p></div>
+            <div class="card"><h3>Low Power Mode</h3><p id="metric-lowpower">3</p></div>
+            <div class="card"><h3>Energy Saved</h3><p id="metric-saved-kwh">1.2 kWh</p></div>
+            <div class="card"><h3>Cost Saved</h3><p id="metric-saved-cost">₹9.60</p></div>
+        </section>
+
+        <!-- Main Interactive Workspace -->
+        <section class="main-content">
+            <!-- Telemetry Simulation Input Form -->
+            <div class="panel form-panel">
+                <h2>Simulate Server Telemetry</h2>
+                <form id="telemetry-form">
+                    <label>Server ID:</label>
+                    <input type="text" id="server_id" value="SRV-104" required>
+
+                    <label>CPU Usage (%):</label>
+                    <input type="number" id="cpu_usage" value="12.5" step="0.1" required>
+
+                    <label>RAM Usage (%):</label>
+                    <input type="number" id="ram_usage" value="22.0" step="0.1" required>
+
+                    <label>Network Usage (MB/s):</label>
+                    <input type="number" id="network_usage" value="5.2" step="0.1" required>
+
+                    <label>Requests Count / min:</label>
+                    <input type="number" id="requests_count" value="150" required>
+
+                    <label>Server Criticality:</label>
+                    <select id="is_critical">
+                        <option value="0">Non-Critical (Standard Workload)</option>
+                        <option value="1">Critical (Always ON)</option>
+                    </select>
+
+                    <label>Current Active Servers in Cluster:</label>
+                    <input type="number" id="total_active_servers" value="5" required>
+
+                    <button type="submit">Analyze & Execute Decision Engine</button>
+                </form>
+            </div>
+
+            <!-- Engine Evaluation Output & Chart -->
+            <div class="panel result-panel">
+                <h2>Engine Evaluation Output</h2>
+                <div id="output-box" class="placeholder-box">
+                    Submit server telemetry parameters on the left to run the ML prediction and safety evaluation engine.
+                </div>
+                <div class="chart-box">
+                    <canvas id="energyChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Frontend Embedded Decision Engine & UI Controller -->
+    <script>
+        let energyChart = null;
+
+        // Initialize empty chart on load
+        window.addEventListener('DOMContentLoaded', () => {
+            initChart(250, 250);
+        });
+
+        document.getElementById('telemetry-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Gather input values
+            const serverId = document.getElementById('server_id').value;
+            const cpu = parseFloat(document.getElementById('cpu_usage').value);
+            const ram = parseFloat(document.getElementById('ram_usage').value);
+            const net = parseFloat(document.getElementById('network_usage').value);
+            const req = parseInt(document.getElementById('requests_count').value);
+            const isCritical = parseInt(document.getElementById('is_critical').value);
+            const totalActive = parseInt(document.getElementById('total_active_servers').value);
+
+            // Simulate ML Workload Prediction (Random Forest logic simulation)
+            const score = (cpu * 0.4) + (ram * 0.3) + ((req / 5000) * 100 * 0.3);
+            let predWorkload = "Low";
+            let confidence = 0.88;
+
+            if (score >= 70) {
+                predWorkload = "High";
+                confidence = 0.92;
+            } else if (score >= 35) {
+                predWorkload = "Medium";
+                confidence = 0.79;
+            }
+
+            // Safety & Criticality Decision Engine Rules
+            let action = "KEEP ON";
+            let reason = "Standard operation maintained.";
+            const minBackupServers = 2;
+
+            if (isCritical === 1) {
+                action = "KEEP ON";
+                reason = "Server marked critical. Forced active.";
+            } else if (confidence < 0.65) {
+                action = "KEEP ON";
+                reason = `Low prediction confidence (${(confidence*100).toFixed(1)}%). Safe mode enforced.`;
+            } else if (predWorkload === "Low") {
+                if (totalActive <= minBackupServers) {
+                    action = "KEEP ON";
+                    reason = "Minimum active backup server threshold reached.";
+                } else if (cpu > 40.0) {
+                    action = "KEEP ON";
+                    reason = "Sudden CPU burst detected; overriding shutdown.";
+                } else {
+                    action = "LOW POWER";
+                    reason = "Low workload & safe backup capacity verified.";
+                }
+            } else if (predWorkload === "Medium") {
+                action = "KEEP ON";
+                reason = "Moderate workload expected; maintaining standard state.";
+            } else {
+                action = "ACTIVATE";
+                reason = "High workload predicted; scaling capacity immediately.";
+            }
+
+            // Power & Cost Calculations
+            const baselinePower = 250.0; // Watts
+            const actualPower = (action === "LOW POWER") ? 45.0 : 250.0;
+            const energySavedKwh = ((baselinePower - actualPower) * 1.0) / 1000.0;
+            const costSavedInr = energySavedKwh * 8.0; // ₹8 per kWh
+
+            // Render Results to UI
+            const box = document.getElementById('output-box');
+            box.className = "placeholder-box";
+            box.innerHTML = `
+                <div class="result-field"><strong>Server ID:</strong> ${serverId}</div>
+                <div class="result-field"><strong>Predicted Workload:</strong> ${predWorkload} (${(confidence * 100).toFixed(1)}% confidence)</div>
+                <div class="result-field"><strong>Decision Engine Action:</strong> <span class="badge badge-${action.replace(' ', '-')}">${action}</span></div>
+                <div class="result-field"><strong>Safety Rule Triggered:</strong> ${reason}</div>
+                <div class="result-field"><strong>Power Consumption:</strong> ${actualPower} W</div>
+                <div class="result-field"><strong>Est. Energy Saved:</strong> ${energySavedKwh.toFixed(3)} kWh/hr</div>
+                <div class="result-field"><strong>Est. Cost Saved:</strong> ₹${costSavedInr.toFixed(2)}/hr</div>
+            `;
+
+            updateChart(baselinePower, actualPower);
+        });
+
+        function initChart(baseline, active) {
+            const ctx = document.getElementById('energyChart').getContext('2d');
+            energyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Baseline (Always ON)', 'Optimized (System Decision)'],
+                    datasets: [{
+                        label: 'Power Draw (Watts)',
+                        data: [baseline, active],
+                        backgroundColor: ['#ef4444', '#10b981'],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true,
+                            grid: { color: '#334155' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart(baseline, active) {
+            if (energyChart) {
+                energyChart.data.datasets[0].data = [baseline, active];
+                energyChart.update();
+            }
+        }
+    </script>
+</body>
+</html>
